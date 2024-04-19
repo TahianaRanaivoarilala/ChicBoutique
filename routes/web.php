@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Admin\Post\PostController as AdminPostController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\Post\PostController;
+use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Home\HomeController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,25 +16,15 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/',[HomeController::class,'index']);
+Route::get('/', [HomeController::class,'index']);
 
-/**
- * Route pour la partie Utilisateurs 😉.
- */
-Route::prefix('/post')->name('post.')->group(function(){
-    Route::get('/index',[PostController::class])->name('index');
-});
-/**
- * Route pour la partie administrateurs ✌.
- */
-Route::prefix('/admin')->name('admin.')->group(function(){
-    /**
-     * Partie PostAdmin.
-     */
-    Route::prefix('/posts')->name('post.')->controller(AdminPostController::class)->group(function(){
-        Route::get('/index','index')->name('index');
-        Route::get('/new','create')->name('create');
-        Route::post('/new','store');
-    });
+Route::get('/dashboard',[HomeController::class,'dashboard'],)->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/admin',[PostController::class,'index'])->name('admin');
 });
+
+require __DIR__.'/auth.php';
