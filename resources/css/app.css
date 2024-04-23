@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 header {
     /* background-color: #333; */
     color: #fff;
@@ -33,7 +32,7 @@ a {
 }
 
 a:hover {
-    color: #0056b3;
+    color: #ffa200;
 }
 
 /* Pied de page */

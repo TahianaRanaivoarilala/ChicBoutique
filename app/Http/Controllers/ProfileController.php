@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
+use App\Models\Post;
+use App\Models\User;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Redirect;
+use App\Http\Requests\ProfileUpdateRequest;
 
 class ProfileController extends Controller
 {
@@ -17,14 +21,15 @@ class ProfileController extends Controller
     public function edit(Request $request): View
     {
         return view('profile.edit', [
-            'user' => $request->user(),
+
+             'user' => $request->user(),
         ]);
     }
 
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(ProfileUpdateRequest $request,User $user): RedirectResponse
     {
         $request->user()->fill($request->validated());
 
@@ -32,9 +37,13 @@ class ProfileController extends Controller
             $request->user()->email_verified_at = null;
         }
 
-        $request->user()->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+       $user->update($this->extractData($user,$request));
+
+
+        return Redirect::route('profile.edit',[
+            'user'=>$user
+        ])->with('status', 'profile-updated');
     }
 
     /**
@@ -56,5 +65,28 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+private function extractData(User $user,ProfileUpdateRequest $request):array
+    {
+        $data=$request->validated();
+
+        /**
+         * @var UploadedFile | null $featuredImage
+         */
+        $featuredImage=$request->validated('featuredImage');
+
+        if($featuredImage===null || $featuredImage->getError())
+        {
+            return $data;
+        }
+
+        if($user->featuredImage)
+        {
+            Storage::disk('public')->delete($user->featuredImage);
+        }
+        $data['featuredImage']=$featuredImage->store('UserProfil','public');;
+        return $data;
+
+
     }
 }
