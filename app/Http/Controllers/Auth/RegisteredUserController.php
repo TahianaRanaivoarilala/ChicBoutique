@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Providers\RouteServiceProvider;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules;
+use Illuminate\Http\UploadedFile;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UserFormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Auth\Events\Registered;
+use App\Providers\RouteServiceProvider;
+use Illuminate\Support\Facades\Storage;
 
 class RegisteredUserController extends Controller
 {
@@ -20,7 +23,10 @@ class RegisteredUserController extends Controller
      */
     public function create(): View
     {
-        return view('auth.register');
+        $user=new User();
+        return view('auth.register',[
+            'user'=>$user
+        ]);
     }
 
     /**
@@ -28,24 +34,41 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(UserFormRequest $request): RedirectResponse
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        $user=new User();
+        $data=$request->validated();
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        // $data['password']=Hash::make($password);
+        $user=User::create($this->extractData($user,$request));
 
-        event(new Registered($user));
+         event(new Registered($user));
 
-        Auth::login($user);
+         Auth::login($user);
 
         return redirect(RouteServiceProvider::HOME);
+    }
+    private function extractData(User $user,UserFormRequest $request):array
+    {
+        $data=$request->validated();
+        $password=$request->validated('password');
+        $user->password=$data['password']=Hash::make($password);
+        /**
+         * @var UploadedFile | null $featuredImage
+         */
+        $featuredImage=$request->validated('featuredImage');
+
+        if($featuredImage===null || $featuredImage->getError())
+        {
+            return $data;
+        }
+        if($user->featuredImage){
+            Storage::disk('public')->delete($user->featuredImage);
+        }
+        $data['featuredImage']=$featuredImage->store('UserProfil','public');
+        // dd($data);
+        return $data;
+
+
     }
 }
